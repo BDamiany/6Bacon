@@ -1,5 +1,6 @@
 import pandas as pd
 from collections import deque, defaultdict
+import json  # Usar json.loads ao invés de eval para segurança
 
 # Carregar o dataset
 movies = pd.read_csv("tmdb_5000_credits.csv")
@@ -9,13 +10,18 @@ actor_to_movies = defaultdict(set)
 movie_to_actors = defaultdict(set)
 
 for _, row in movies.iterrows():
-    movie_id = row['id']
-    cast = eval(row['cast'])  # Cast é uma lista de dicionários (JSON)
-    cast_actors = [actor['name'] for actor in cast]
-    
-    for actor in cast_actors:
-        actor_to_movies[actor].add(movie_id)
-        movie_to_actors[movie_id].add(actor)
+    try:
+        movie_id = row['id']  # Presumindo que a coluna 'id' esteja presente
+        cast = json.loads(row['cast'])  # Usar json.loads para parse do JSON
+
+        # Garantir que 'cast' seja uma lista de dicionários
+        cast_actors = [actor['name'] for actor in cast]
+        
+        for actor in cast_actors:
+            actor_to_movies[actor].add(movie_id)
+            movie_to_actors[movie_id].add(actor)
+    except (KeyError, json.JSONDecodeError) as e:
+        print(f"Erro ao processar a linha com movie_id {row['id']}: {e}")
 
 # Função para encontrar a cadeia de conexão
 def find_connection(actor1, actor2):
@@ -42,7 +48,8 @@ def find_connection(actor1, actor2):
     return "Sem conexão"
 
 # Testar
-actor1 = "Kevin Bacon"
+actor1 = "Kevin Bacon"  
 actor2 = "Tom Hanks"
 connection = find_connection(actor1, actor2)
 print(connection)
+
